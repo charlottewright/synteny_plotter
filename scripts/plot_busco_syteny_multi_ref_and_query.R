@@ -7,9 +7,11 @@ colnames(assignments) <- c('busco', 'merian')
 
 read_buscos <- function(file_path, file_name, prefix){
   df <- read.csv(paste(file_path, file_name, sep=''), sep='\t', comment.char = '#', header = FALSE)[,c(0:6)]
-  colnames(df) <- c('busco', 'status', paste('chr', prefix, sep=''), paste(prefix, 'start', sep=''), paste(prefix, 'end', sep=''), paste(prefix, 'strand', sep=''))
+  colnames(df) <- c('busco', 'status', paste0('chr', prefix), paste0(prefix, 'start'), paste0(prefix, 'end'), paste0(prefix, 'strand'))
   df <- df[df$status == "Complete",]
   df <- subset(df, select=-c(status))
+  df <- df[!grepl(':', df[[paste0('chr', prefix)]]),]
+#  df <- df[!grepl(':', df$chrQ),]
   return(df)
 }
 
@@ -94,9 +96,11 @@ offset_chr <- function(df, q_or_r, chr_offset){
   return(output_list)
 }
     
-plot_one_ref_chr <- function(df, col1, col2, adjustment=0){ # by default dont adjust positio of query chr
-  df$Qstart <- df$Qstart + adjustment_length
-  df$Qend <- df$Qend + adjustment_length
+plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_length_Q){ 
+  df$Qstart <- df$Qstart + adjustment_length_Q
+  df$Qend <- df$Qend + adjustment_length_Q
+  df$Rstart <- df$Rstart + adjustment_length_R
+  df$Rend <- df$Rend + adjustment_length_R
   Qstarts <-df$Qstart
   Qends <- df$Qend
   Rstarts <- df$Rstart # was alignments
@@ -116,9 +120,11 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment=0){ # by default dont ad
 file_path = 'BUSCOs/All/'
 gap =6
 show_outline = TRUE
-chr_offset = 5000000
-R_ID <- 'Micropterix_aruncella.tsv'
-Q_ID <- 'Melitaea_cinxia.tsv'
+chr_offset = 20000000
+
+#chr_offset = 5000000
+R_ID <- 'Melitaea_cinxia.tsv'
+Q_ID <- 'Lysandra_coridon.tsv'
 ### read in data ###
 R_df <- read_buscos(file_path, R_ID, 'R')
 Q_df <- read_buscos(file_path, Q_ID, 'Q') # was Agrochola_circellaris.tsv
@@ -127,7 +133,7 @@ Q_df <- read_buscos(file_path, Q_ID, 'Q') # was Agrochola_circellaris.tsv
 # OU611839.1 is fused in A. circellaris
 alignments <- merge(Q_df, R_df, by='busco')
 alignments <- merge(alignments, assignments, by='busco')
-alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] # fused chr
+#alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] # fused chr
 alignments <- alignments %>% group_by(chrR) %>% filter(n() > 5) %>% ungroup()
 #alignments <- merge(alignments, assignments)
 
@@ -139,19 +145,35 @@ offset_list_Q <- offset_alignments_Q$offset_list
 chr_order_R <- offset_alignments_RQ$chr_order
 chr_order_Q <- offset_alignments_Q$chr_order
 
-rough_max_end <- max(alignments$Rend)
+rough_max_end <-  max(max(alignments$Qend), max(alignments$Rend))
 plot_length = rough_max_end  # make this nicer
 # if want to centre the query chr:
-adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
+if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is greater than total query length, then plot size & adjustment is dictated by ref
+  adjustment_length_Q <- (max(alignments$Rend) - max(alignments$Qend)) / 2  # i.e. half the difference between the two
+  adjustment_length_Q <- 0
+} else{
+  adjustment_length_R <- (max(alignments$Qend) - max(alignments$Rend)) / 2 
+  adjustment_length_Q <-0
+}
+#adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
-plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+0.2)*-1),(gap+0.2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+0.2)*-1),(gap+1)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
-col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
+
+
+
+if (length(chr_order_R) <= 6){
+  col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
+} else { col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
+                '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
+                '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
+                '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
+}
 counter <- 1
 
 for (i in chr_order_R){
   temp <- alignments[alignments$chrR == i,]
-  plot_one_ref_chr(temp, col_list[[counter]], "red", adjustment =adjustment_length)
+  plot_one_ref_chr(temp, col_list[[counter]], "red", adjustment_length_R, adjustment_length_Q)
   counter <- counter + 1
 }
 
@@ -161,14 +183,16 @@ for (i in chr_order_Q){
   temp <- alignments[alignments$chrQ == i,]
   Qfirst <- min(temp$Qstart)
   Qlast <- max(temp$Qend)
-  segments(Qfirst+adjustment_length, 1-gap, Qlast+1+adjustment_length, 1-gap, lwd = 5)
+  segments(Qfirst+adjustment_length, 1-gap, Qlast+1+adjustment_length_Q, 1-gap, lwd = 5)
 }
 
 ## chr outlines for query:
 counter <- 1
 for (i in chr_order_R){
   temp <- alignments[alignments$chrR == i,]
-  segments(min(temp$Rstart), gap, max(temp$Rend), gap, lwd = 5) 
+  Rfirst <- min(temp$Rstart)
+  Rlast <- max(temp$Rend)
+  segments(Rfirst+adjustment_length, gap, Rlast+1+adjustment_length_R, gap, lwd = 5)
 }
 
 ## text labels for ref:
@@ -178,7 +202,8 @@ for (i in chr_order_R){
   Rfirst <- min(temp$Rstart)
   Rlast <- max(temp$Rend)
   offset <- offset_list_R[[counter]]
-  mtext(text=i, side=3, at=((Rfirst+Rlast+1)/2), cex=0.5)
+  text(x = ((Rlast+Rfirst+1)/2)+adjustment_length_R, y = (gap+1), label = i,
+       srt = 90, cex=0.5) # Rotation
   counter <- counter + 1
   }
 
@@ -188,9 +213,9 @@ for (i in chr_order_Q){
   temp <- alignments[alignments$chrQ == i,]
   Qfirst <- min(temp$Qstart)
   Qlast <- max(temp$Qend)
-  text(x = ((Qlast+Qfirst+1)/2)+adjustment_length, y = (gap-0.2)*-1, label = i,
-       srt = 0, cex=0.5) # Rotation
-#  mtext(text=i, side=1, at=((Qlast+Qfirst+1)/2)+adjustment_length, cex=0.75)
+  text(x = ((Qlast+Qfirst+1)/2)+adjustment_length_Q, y = (gap)*-1, label = i,
+       srt = 90, cex=0.5) # Rotation
   counter <- counter + 1
 }
+
 
