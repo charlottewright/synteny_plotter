@@ -200,8 +200,8 @@ rough_max_end <-  max(max(alignments$Qend), max(alignments$Rend))
 plot_length = rough_max_end  # make this nicer
 # if want to centre the query chr:
 if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is greater than total query length, then plot size & adjustment is dictated by ref
+  adjustment_length_R <- 0
   adjustment_length_Q <- (max(alignments$Rend) - max(alignments$Qend)) / 2  # i.e. half the difference between the two
-  adjustment_length_Q <- 0
 } else{
   adjustment_length_R <- (max(alignments$Qend) - max(alignments$Rend)) / 2 
   adjustment_length_Q <-0
@@ -235,7 +235,7 @@ for (i in chr_order_Q){
   temp <- alignments[alignments$chrQ == i,]
   Qfirst <- min(temp$Qstart)
   Qlast <- max(temp$Qend)
-  segments(Qfirst+adjustment_length, 1-gap, Qlast+1+adjustment_length_Q, 1-gap, lwd = 5)
+  segments(Qfirst+adjustment_length_Q, 1-gap, Qlast+1+adjustment_length_Q, 1-gap, lwd = 5)
 }
 
 ## chr outlines for query:
@@ -244,7 +244,7 @@ for (i in chr_order_R){
   temp <- alignments[alignments$chrR == i,]
   Rfirst <- min(temp$Rstart)
   Rlast <- max(temp$Rend)
-  segments(Rfirst+adjustment_length, gap, Rlast+1+adjustment_length_R, gap, lwd = 5)
+  segments(Rfirst+adjustment_length_R, gap, Rlast+1+adjustment_length_R, gap, lwd = 5)
 }
 
 ## text labels for ref:
