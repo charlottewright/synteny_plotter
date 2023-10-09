@@ -21,151 +21,6 @@ parser$add_argument("-f", "-filter", type = "integer",
 
 args <- parser$parse_args()
 
-### functions
-
-
-read_buscos <- function(file_name, prefix){
-  chr_label <- paste0('chr', prefix)
-  df <- read.csv(file_name, sep='\t', comment.char = '#', header = FALSE)[,c(0:6)]
-  colnames(df) <- c('busco', 'status', chr_label, paste0(prefix, 'start'), paste0(prefix, 'end'), paste0(prefix, 'strand'))
-  # these following lines are assuming '|' is only found in the rows with a bug in them
-  if ( any(grepl("[|]", df[, chr_label])) ){
-    # TODO: add warning here
-    df[, chr_label] <- trim_strings(trim_strings(df[, chr_label], ":", 2), "[|]", 2)
-  }
-  df <- df[df$status == "Complete",]
-  df <- subset(df, select=-c(status))
-  return(df)
-}
-
-
-#make a polygon from two lines - SIMON
-lines.to.poly <- function(l1,l2, col=NULL, border=NULL, lwd=NULL){
-  polygon(c(l1[,1],rev(l2[,1])), c(l1[,2],rev(l2[,2])), col=col, border=border)
-}
-
-sigmoid.connector <- function(x1,y1,x2,y2, curvature=10, steps=50, vertical=FALSE){
-  if (vertical==TRUE) {
-    vals <- c(x1,y1,x2,y2)
-    x1 <- vals[2]
-    x2 <- vals[4]
-    y1 <- vals[1]
-    y2 <- vals[3]
-  }
-  x <- seq(x1,x2,(x2-x1)/steps)
-  x_norm <- (x-(x1+x2)/2)/((x2-x1)/2)
-  y_norm <- 1/(1+exp(-x_norm*curvature))
-  y <- y1+(y_norm*(y2-y1))
-  if (vertical==TRUE) return(cbind(y,x))
-  cbind(x,y)
-}
-
-trim_strings <- function(values, delimiter, index){
-  sapply(strsplit(values, delimiter), function(x){ x[index] })
-  
-}
-
-#make a polygon from two lines - SIMON
-lines.to.poly <- function(l1,l2, col=NULL, border=NULL, lwd=NULL){
-  polygon(c(l1[,1],rev(l2[,1])), c(l1[,2],rev(l2[,2])), col=col, border=border)
-}
-
-sigmoid.connector <- function(x1,y1,x2,y2, curvature=10, steps=50, vertical=FALSE){
-  if (vertical==TRUE) {
-    vals <- c(x1,y1,x2,y2)
-    x1 <- vals[2]
-    x2 <- vals[4]
-    y1 <- vals[1]
-    y2 <- vals[3]
-  }
-  x <- seq(x1,x2,(x2-x1)/steps)
-  x_norm <- (x-(x1+x2)/2)/((x2-x1)/2)
-  y_norm <- 1/(1+exp(-x_norm*curvature))
-  y <- y1+(y_norm*(y2-y1))
-  if (vertical==TRUE) return(cbind(y,x))
-  cbind(x,y)
-}
-
-## check order is matching in the two chr i.e. that one chr isn't flipped relative to the other
-orientate_chr <- function(df, ref_chr){
-  df <- df[df$chrR == ref_chr,]
-  df <- df %>% arrange(Qstart) # sort
-  num_rows <- nrow(df) /20  # 5% of rows
-  print(num_rows)
-  R_start_value <- mean(head(df, n=num_rows)$Rstart)
-  R_end_value <- mean(tail(df, n=num_rows)$Rend)
-  print(R_start_value)
-  print(R_end_value)
-  Q_start_value <- mean(head(df, n=num_rows)$Qstart)
-  Q_end_value <- mean(tail(df, n=num_rows)$Qend)
-  print(Q_start_value)
-  print(Q_end_value)
-  R_diff <- sign(R_end_value - R_start_value) # positive means (+) direction 
-  Q_diff <- sign(Q_end_value - Q_start_value) # negative means (-) direction
-  print(R_diff)
-  print(Q_diff)
-  # This code block aims to a ref chr if its in different direction to the query
-  if (R_diff != Q_diff){
-    df$Rstart <- (df$Rstart - R_end_value)*-1 # should technically be length of chr not R_end value
-    df$Rend <- (df$Rend - R_end_value)*-1 # should technically be length of chr not R_end value
-    df$Rstrand[df$Rstrand == '-'] <- '--'
-    df$Rstrand[df$Rstrand == '+'] <- '-'
-    df$Rstrand[df$Rstrand == '--'] <- '+'
-    df$Rstart_temp <- df$Rstart
-    df$Rstart <- df$Rend
-    df$Rend <- df$Rstart_temp
-    df <- subset(df, select = -c(Rstart_temp) )
-  }
-  return(df)
-}
-
-offset_chr <- function(df, q_or_r, chr_offset){
-  counter = 0
-  offset = 0
-  offset_list <- list()
-  offset_alignments <- data.frame(matrix(ncol = 10, nrow = 0))
-  chr_prefix <- paste0('chr', q_or_r)
-  chr_order <- unique(df[[chr_prefix]])
-  chrStart <- paste0(q_or_r, 'start')
-  chrEnd <- paste0(q_or_r, 'end')
-  for (i in chr_order){
-    chr_df <- df[df[[chr_prefix]] == i,]
-    max_end <- max(chr_df[[chrStart]])
-    print(max_end)
-    if (counter != 0){ # only need to offset start/end if this is not the first chr
-      chr_df <- chr_df %>% arrange(Rstart) # sort by ref regardless of it ref or query
-      chr_df[[chrStart]] <- chr_df[[chrStart]] + offset  # allows for accumulative chr positions
-      chr_df[[chrEnd]] <- chr_df[[chrEnd]] + offset # allows for accumulative chr positions
-    }
-    offset_alignments <- rbind(offset_alignments, chr_df)
-    offset_list <- append(offset_list, offset)
-    offset <- offset + max_end + chr_offset # accumulative offset
-    counter <- counter + 1
-  }
-  output_list <- list('df' = offset_alignments, 'offset_list' = offset_list, 'chr_order'=chr_order)
-  return(output_list)
-}
-
-plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_length_Q){ 
-  df$Qstart <- df$Qstart + adjustment_length_Q
-  df$Qend <- df$Qend + adjustment_length_Q
-  df$Rstart <- df$Rstart + adjustment_length_R
-  df$Rend <- df$Rend + adjustment_length_R
-  Qstarts <-df$Qstart
-  Qends <- df$Qend
-  Rstarts <- df$Rstart # was alignments
-  Rends <- df$Rend # was alignments
-  #cols =  c("blue", "red")
-  cols = c(col1, col2)
-  border = ifelse(sign(Rends - Rstarts) == sign(Qends - Qstarts), cols[1], cols[2]) # if R&Q are same sign, use blue, else use red
-  col = border
-  for (i in 1:nrow(df)){ # curved lines- sigmoid connector = x1,y1,x2,y2
-    lines.to.poly(sigmoid.connector(Qstarts[i], 1-gap, Rstarts[i], 0+gap, vertical=T),
-                  sigmoid.connector(Qends[i], 1-gap, Rends[i], 0+gap, vertical=T),
-                  col = col[i], border=ifelse(show_outline==FALSE, NA, border[i]), lwd=lwd)
-  }
-}
-
 ### specify arguments ###
 
 # busco1 <- args$busco1
@@ -177,23 +32,36 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_len
 # output_prefix <- args.output
 
 setwd('/Users/cw22/Documents/R_work/synteny_plotter/')
-assignments <- read.csv('../Chromosome_evolution_Lepidoptera_MS/sup_tables/TableS4_Merian_element_definitions.tsv', sep='\t', header=FALSE)[,c(1,3)]
-colnames(assignments) <- c('busco', 'alg')
-busco1 <- '../Chromoosome_evolution_Lepidoptera/BUSCOs/All/Melitaea_cinxia.tsv'
-buco2 <- '../../polyommatus_atlantica/data/busco_paint/Polyommatus_atlantica_full_table.tsv'
+source('scripts/helper_functions.R') # import functions
+
+### specify parameters
+alg_file <- '../Chromosome_evolution_Lepidoptera_MS/sup_tables/TableS4_Merian_element_definitions.tsv'
+busco1 <- '../Chromosome_evolution_Lepidoptera/Data/BUSCOs/All/Melitaea_cinxia.tsv'
+#busco2 <- '../polyommatus_atlantica/data/busco_paint/Polyommatus_atlantica_full_table.tsv'
+busco2 <- '../Chromosome_evolution_Lepidoptera/Data/BUSCOs/All/Vanessa_cardui.tsv'
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
 minimum_buscos = 5
 output_prefix = 'test'
+chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
+chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
+
 ### read in data ###
-
+algs <- read.csv(alg_file, sep='\t', header=FALSE)[,c(1,3)]
+colnames(algs) <- c('busco', 'alg')
 R_df <- read_buscos(busco1, 'R')
-Q_df <- read_buscos(buco2, 'Q') # was Agrochola_circellaris.tsv
-#R_df <- read_buscos(file_path, "Lysandra_coridon.tsv", 'R') #
+Q_df <- read_buscos(busco2, 'Q') # was Agrochola_circellaris.tsv
+R_chromosomes <- read.table(chrom1, sep = '\t', header = TRUE)
+Q_chromosomes <- read.table(chrom2, sep = '\t', header = TRUE)
 
-#R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
-#Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
+#R_chromosomes <- R_chromosomes %>% arrange(desc(chr))
+#head(R_chromosomes)
+
+R_chromosomes <- R_chromosomes %>% arrange(order)
+Q_chromosomes <- Q_chromosomes %>% arrange(order)
+chr_order_R <- R_chromosomes$chr # extract order of chr
+chr_order_Q <- Q_chromosomes$chr #extract order of chr
 
 # TODO uncomment following lines
 # chr_order_R <- R_chromosomes[order(R_chromosomes$order), 'chromosome']
@@ -202,46 +70,42 @@ Q_df <- read_buscos(buco2, 'Q') # was Agrochola_circellaris.tsv
 
 # OU611839.1 is fused in A. circellaris
 alignments <- merge(Q_df, R_df, by='busco')
-alignments <- merge(alignments, assignments, by='busco')
-
-# alignments <- merge(alignments, assignments, by='busco')
-alignments <- merge(alignments, assignments, by='busco')
-# TODO: allow for assignments in the arguments
+alignments <- merge(alignments, algs, by='busco')
+# TODO: allow for algs in the arguments
 alignments$alg <- NA
 
-alignments <- alignments[alignments$chrR %in% R_chromosomes$chromosome,] # specify which chr interested in 
-alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chromosome,] # specify which chr interested in 
+alignments <- alignments[alignments$chrR %in% R_chromosomes$chr,] # specify which chr interested in 
+alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chr,] # specify which chr interested in 
+
 #alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] 
 
 alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
 #alignments <- merge(alignments, assignments)
 
 # TODO add chromosome order in the offset function
-offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset)
-offset_alignments_RQ <- offset_chr(offset_alignments_Q$df, 'R', chr_offset)
+offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
+offset_alignments_RQ <- offset_chr(offset_alignments_Q$df, 'R', chr_offset, chr_order_R)
 alignments <- offset_alignments_RQ$df
 offset_list_R <- offset_alignments_RQ$offset_list
 offset_list_Q <- offset_alignments_Q$offset_list
-chr_order_R <- offset_alignments_RQ$chr_order
-chr_order_Q <- offset_alignments_Q$chr_order
+#chr_order_R <- offset_alignments_RQ$chr_order
+#chr_order_Q <- offset_alignments_Q$chr_order
 
 rough_max_end <-  max(max(alignments$Qend), max(alignments$Rend))
 plot_length = rough_max_end  # make this nicer
 # if want to centre the query chr:
 if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is greater than total query length, then plot size & adjustment is dictated by ref
   adjustment_length_Q <- (max(alignments$Rend) - max(alignments$Qend)) / 2  # i.e. half the difference between the two
-  adjustment_length_Q <- 0
+  adjustment_length_R <- 0
 } else{
   adjustment_length_R <- (max(alignments$Qend) - max(alignments$Rend)) / 2
   adjustment_length_Q <-0
 }
 #adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
-pdf(paste0(output_prefix, '.pdf'))
+#pdf(paste0(output_prefix, '.pdf'))
 
-plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+0.2)*-1),(gap+1)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
-
-
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1),(gap+1.5)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 
 if (length(chr_order_R) <= 6){
@@ -284,7 +148,7 @@ for (i in chr_order_R){
   Rfirst <- min(temp$Rstart)
   Rlast <- max(temp$Rend)
   offset <- offset_list_R[[counter]]
-  text(x = ((Rlast+Rfirst+1)/2)+adjustment_length_R, y = (gap+1), label = i,
+  text(x = ((Rlast+Rfirst+1)/2)+adjustment_length_R, y = (gap+1.5), label = i,
        srt = 90, cex=0.5) # Rotation
   counter <- counter + 1
 }
@@ -295,9 +159,12 @@ for (i in chr_order_Q){
   temp <- alignments[alignments$chrQ == i,]
   Qfirst <- min(temp$Qstart)
   Qlast <- max(temp$Qend)
-  text(x = ((Qlast+Qfirst+1)/2)+adjustment_length_Q, y = (gap)*-1, label = i,
+  text(x = ((Qlast+Qfirst+1)/2)+adjustment_length_Q, y = (gap+0.5)*-1, label = i,
        srt = 90, cex=0.5) # Rotation
   counter <- counter + 1
 }
 
 dev.off()
+
+# chrom1 - M. cinxia REF
+# chrom2 - V. cardui  QUERY
