@@ -1,8 +1,12 @@
 # cutoff of block in terms of same strand and stuff, and distance until next ortholog
-library(dplyr)
-
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library("dplyr"))
+
+<<<<<<< HEAD
+suppressPackageStartupMessages(library("argparse"))
+suppressPackageStartupMessages(library("dplyr"))
+=======
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 parser <- ArgumentParser()
 parser$add_argument("-busco1",
                     help="Busco \"full_table.tsv\" of the top species")
@@ -21,6 +25,7 @@ parser$add_argument("-f", "-filter", type = "integer",
 
 args <- parser$parse_args()
 
+<<<<<<< HEAD
 ### functions
 
 
@@ -32,6 +37,36 @@ read_buscos <- function(file_name, prefix){
   if ( any(grepl("[|]", df[, chr_label])) ){
     # TODO: add warning here
     df[, chr_label] <- trim_strings(trim_strings(df[, chr_label], ":", 2), "[|]", 2)
+=======
+# args$busco1 <- 'BUSCOs/All/Melitaea_cinxia.tsv'
+# args$busco2 <- 'BUSCOs/All/Lysandra_coridon.tsv'
+
+# args$busco1 <- '../data/springtails/dicyrtomina_minuta/dicyrtomina_minuta_full_table.tsv'
+# args$busco2 <- '../data/springtails/allacma_fusca/allacma_fusca_full_table.tsv'
+# args$chrom1 <- '../data/springtails/dicyrtomina_minuta/chromosome_table.tsv'
+# args$chrom2 <- '../data/springtails/allacma_fusca/chromosome_table.tsv'
+# args$o <- "../data/springtails/testing_plot"
+# args.g <- 6
+
+gap = args$g
+
+# setwd('/Users/cw22/Documents/R_work/Chromosome_evolution_Lepidoptera/Data/')
+# assignments <- read.csv('../../Chromosome_evolution_Lepidoptera_MS/sup_tables/TableS4_Merian_element_definitions.tsv', sep='\t', header=FALSE)[,c(1,3)]
+# colnames(assignments) <- c('busco', 'alg')
+
+trim_strings <- function(values, delimiter, index){
+  sapply(strsplit(values, delimiter), function(x){ x[index] })
+}
+
+read_buscos <- function(file_name, prefix){
+  df <- read.csv(file_name, sep='\t', comment.char = '#', header = FALSE)[,c(0:6)]
+  species_chr_label <- paste0('chr', prefix)
+  colnames(df) <- c('busco', 'status', species_chr_label, paste(prefix, 'start', sep=''), paste(prefix, 'end', sep=''), paste(prefix, 'strand', sep=''))
+  # these following lines are assuming 
+  if ( any(grepl("[|]", df[, species_chr_label])) ){
+    # TODO: add warning here
+    df[, species_chr_label] <- trim_strings(trim_strings(df[, species_chr_label], ":", 2), "[|]", 2)
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
   }
   df <- df[df$status == "Complete",]
   df <- subset(df, select=-c(status))
@@ -167,6 +202,7 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_len
 }
 
 ### specify arguments ###
+<<<<<<< HEAD
 
 # busco1 <- args$busco1
 # buco2 <- args$busco2
@@ -194,11 +230,25 @@ Q_df <- read_buscos(buco2, 'Q') # was Agrochola_circellaris.tsv
 
 #R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
 #Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
+=======
+show_outline = TRUE
+chr_offset = 20000000
+#chr_offset = 5000000
+
+### read in data ###
+R_df <- read_buscos(args$busco1, 'R')
+Q_df <- read_buscos(args$busco2, 'Q') # was Agrochola_circellaris.tsv
+#R_df <- read_buscos(file_path, "Lysandra_coridon.tsv", 'R') #
+
+R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
+Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 
 # TODO uncomment following lines
 # chr_order_R <- R_chromosomes[order(R_chromosomes$order), 'chromosome']
 # chr_order_Q <- Q_chromosomes[order(Q_chromosomes$order), 'chromosome']
 
+<<<<<<< HEAD
 
 # OU611839.1 is fused in A. circellaris
 alignments <- merge(Q_df, R_df, by='busco')
@@ -214,6 +264,19 @@ alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chromosome,] # speci
 #alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] 
 
 alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+=======
+# OU611839.1 is fused in A. circellaris
+alignments <- merge(Q_df, R_df, by='busco')
+# alignments <- merge(alignments, assignments, by='busco')
+# TODO: allow for assignments in the arguments
+alignments$alg <- NA
+
+alignments <- alignments[alignments$chrR %in% R_chromosomes$chromosome,] # fused chr
+alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chromosome,] # fused chr
+
+#alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] # fused chr
+alignments <- alignments %>% group_by(chrR) %>% filter(n() > 5) %>% ungroup()
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 #alignments <- merge(alignments, assignments)
 
 # TODO add chromosome order in the offset function
@@ -229,18 +292,23 @@ rough_max_end <-  max(max(alignments$Qend), max(alignments$Rend))
 plot_length = rough_max_end  # make this nicer
 # if want to centre the query chr:
 if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is greater than total query length, then plot size & adjustment is dictated by ref
+  adjustment_length_R <- 0
   adjustment_length_Q <- (max(alignments$Rend) - max(alignments$Qend)) / 2  # i.e. half the difference between the two
-  adjustment_length_Q <- 0
 } else{
   adjustment_length_R <- (max(alignments$Qend) - max(alignments$Rend)) / 2
   adjustment_length_Q <-0
 }
 #adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
+<<<<<<< HEAD
 pdf(paste0(output_prefix, '.pdf'))
 
 plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+0.2)*-1),(gap+1)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
+=======
+pdf(paste0(args$o, '.pdf'))
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+0.2)*-1),(gap+1)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 
 
@@ -265,7 +333,11 @@ for (i in chr_order_Q){
   temp <- alignments[alignments$chrQ == i,]
   Qfirst <- min(temp$Qstart)
   Qlast <- max(temp$Qend)
+<<<<<<< HEAD
   segments(Qfirst+adjustment_length_Q, 1-gap, Qlast+adjustment_length_Q, 1-gap, lwd = 5)
+=======
+  segments(Qfirst+adjustment_length_Q, 1-gap, Qlast+1+adjustment_length_Q, 1-gap, lwd = 5)
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 }
 
 ## chr outlines for ref:
@@ -274,7 +346,11 @@ for (i in chr_order_R){
   temp <- alignments[alignments$chrR == i,]
   Rfirst <- min(temp$Rstart)
   Rlast <- max(temp$Rend)
+<<<<<<< HEAD
   segments(Rfirst+adjustment_length_R, gap, Rlast+adjustment_length_R, gap, lwd = 5)
+=======
+  segments(Rfirst+adjustment_length_R, gap, Rlast+1+adjustment_length_R, gap, lwd = 5)
+>>>>>>> dfa901c12f44fa9230abe0c3e5c944c764a7ba16
 }
 
 ## text labels for ref:
