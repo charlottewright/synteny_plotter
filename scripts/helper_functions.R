@@ -135,3 +135,22 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_len
                   col = col[i], border=ifelse(show_outline==FALSE, NA, border[i]), lwd=lwd)
   }
 }
+
+# stolem from "the internet"; DOES NOT TAKE VECTORS
+t_col <- function(color, percent = 50, name = NULL) {
+  #      color = color name
+  #    percent = % transparency
+  #       name = an optional name for the color
+
+## Get RGB values for named color
+rgb.val <- col2rgb(color)
+
+## Make new color using input color as base and alpha set by transparency
+t.col <- rgb(rgb.val[1], rgb.val[2], rgb.val[3],
+             max = 255,
+             alpha = (100 - percent) * 255 / 100,
+             names = name)
+
+## Save the color
+return(t.col)
+}

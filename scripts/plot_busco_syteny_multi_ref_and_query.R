@@ -1,8 +1,8 @@
 # cutoff of block in terms of same strand and stuff, and distance until next ortholog
-library(dplyr)
 
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library("dplyr"))
+
 parser <- ArgumentParser()
 parser$add_argument("-busco1",
                     help="Busco \"full_table.tsv\" of the top species")
@@ -18,38 +18,38 @@ parser$add_argument("-g", "-gap", type = "integer",
                     help="Gap between two chromosomal sets")
 parser$add_argument("-f", "-filter", type = "integer",
                     help="The minimal number of BUSCOs on a chromosome to include")
+parser$add_argument("-alpha", type = "integer", default = 0,
+                    help="Set transparency to colours [%]")
 
 args <- parser$parse_args()
 
 ### specify arguments ###
 
-# busco1 <- args$busco1
-# buco2 <- args$busco2
-# gap <- args.gap
-# chrom1 <- args.chrom1
-# chrom2 <- args.chrom2
-# minimum_buscos <- args.filter
-# output_prefix <- args.output
+busco1 <- args$busco1
+busco2 <- args$busco2
+# gap <- args$gap
+chrom1 <- args$chrom1
+chrom2 <- args$chrom2
+# minimum_buscos <- args$filter
+output_prefix <- args$output
 
-setwd('/Users/cw22/Documents/R_work/synteny_plotter/')
 source('scripts/helper_functions.R') # import functions
 
 ### specify parameters
-alg_file <- '../Chromosome_evolution_Lepidoptera_MS/sup_tables/TableS4_Merian_element_definitions.tsv'
-busco1 <- '../Chromosome_evolution_Lepidoptera/Data/BUSCOs/All/Melitaea_cinxia.tsv'
-#busco2 <- '../polyommatus_atlantica/data/busco_paint/Polyommatus_atlantica_full_table.tsv'
-busco2 <- '../Chromosome_evolution_Lepidoptera/Data/BUSCOs/All/Vanessa_cardui.tsv'
+# alg_file <- '../sup_tables/TableS4_Merian_element_definitions.tsv'
+# busco1 <- 'test_data/Melitaea_cinxia.tsv'
+# busco2 <- 'test_data/Vanessa_cardui.tsv'
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
 minimum_buscos = 5
-output_prefix = 'test'
-chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
-chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
+# output_prefix = 'test'
+# chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
+# chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
 
 ### read in data ###
-algs <- read.csv(alg_file, sep='\t', header=FALSE)[,c(1,3)]
-colnames(algs) <- c('busco', 'alg')
+# algs <- read.csv(alg_file, sep='\t', header=FALSE)[,c(1,3)]
+# colnames(algs) <- c('busco', 'alg')
 R_df <- read_buscos(busco1, 'R')
 Q_df <- read_buscos(busco2, 'Q') # was Agrochola_circellaris.tsv
 R_chromosomes <- read.table(chrom1, sep = '\t', header = TRUE)
@@ -70,7 +70,7 @@ chr_order_Q <- Q_chromosomes$chr #extract order of chr
 
 # OU611839.1 is fused in A. circellaris
 alignments <- merge(Q_df, R_df, by='busco')
-alignments <- merge(alignments, algs, by='busco')
+# alignments <- merge(alignments, algs, by='busco')
 # TODO: allow for algs in the arguments
 alignments$alg <- NA
 
@@ -103,7 +103,7 @@ if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is grea
 }
 #adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
-#pdf(paste0(output_prefix, '.pdf'))
+pdf(paste0(output_prefix, '.pdf'))
 
 plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1),(gap+1.5)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
@@ -116,6 +116,8 @@ if (length(chr_order_R) <= 6){
                        '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
 }
 counter <- 1
+
+col_list <- sapply(col_list, t_col, args$alpha)
 
 for (i in chr_order_R){
   temp <- alignments[alignments$chrR == i,]
