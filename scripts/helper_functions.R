@@ -41,27 +41,6 @@ trim_strings <- function(values, delimiter, index){
   
 }
 
-#make a polygon from two lines - SIMON
-lines.to.poly <- function(l1,l2, col=NULL, border=NULL, lwd=NULL){
-  polygon(c(l1[,1],rev(l2[,1])), c(l1[,2],rev(l2[,2])), col=col, border=border)
-}
-
-sigmoid.connector <- function(x1,y1,x2,y2, curvature=10, steps=50, vertical=FALSE){
-  if (vertical==TRUE) {
-    vals <- c(x1,y1,x2,y2)
-    x1 <- vals[2]
-    x2 <- vals[4]
-    y1 <- vals[1]
-    y2 <- vals[3]
-  }
-  x <- seq(x1,x2,(x2-x1)/steps)
-  x_norm <- (x-(x1+x2)/2)/((x2-x1)/2)
-  y_norm <- 1/(1+exp(-x_norm*curvature))
-  y <- y1+(y_norm*(y2-y1))
-  if (vertical==TRUE) return(cbind(y,x))
-  cbind(x,y)
-}
-
 ## check order is matching in the two chr i.e. that one chr isn't flipped relative to the other
 orientate_chr <- function(df, ref_chr){
   df <- df[df$chrR == ref_chr,]
