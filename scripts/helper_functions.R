@@ -40,6 +40,36 @@ trim_strings <- function(values, delimiter, index){
   sapply(strsplit(values, delimiter), function(x){ x[index] })
   
 }
+manual_invert_chr <- function(df, Q_chromosomes){
+  Q_chr <- Q_chromosomes$chr
+  reorientated_alignments <- data.frame(matrix(ncol = 10, nrow = 0))
+  colnames(reorientated_alignments) <- colnames(alignments)
+  for (q in Q_chr){
+    df_subset <- df[df$chrQ == q,]
+    if (Q_chromosomes[Q_chromosomes$chr == q,]$invert == "TRUE"){
+      print(q)
+      print('flip!')
+      Q_end_value <- max(df$Qend)
+      df_subset$Qstart <- (df_subset$Qstart - Q_end_value)*-1 # should technically be length of chr not R_end value
+      df_subset$Qend <- (df_subset$Qend - Q_end_value)*-1 # should technically be length of chr not R_end value
+      df_subset$Qstrand[df_subset$Qstrand == '-'] <- '--'
+      df_subset$Qstrand[df_subset$Qstrand == '+'] <- '-'
+      df_subset$Qstrand[df_subset$Qstrand == '--'] <- '+'
+      df_subset$Qstart_temp <- df_subset$Qstart
+      df_subset$Qstart <- df_subset$Qend
+      df_subset$Qend <- df_subset$Qstart_temp
+      df_subset <- subset(df_subset, select = -c(Qstart_temp))
+      reorientated_alignments <- rbind(reorientated_alignments, df_subset)
+    }
+    else{
+      print('no flip!')
+      reorientated_alignments <- rbind(reorientated_alignments, df_subset)
+    }
+    
+  }
+  return(reorientated_alignments)
+}
+
 
 ## check order is matching in the two chr i.e. that one chr isn't flipped relative to the other
 auto_invert_chr <- function(df, ref_chr){
