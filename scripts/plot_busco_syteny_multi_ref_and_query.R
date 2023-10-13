@@ -1,5 +1,39 @@
 # cutoff of block in terms of same strand and stuff, and distance until next ortholog
 
+
+## temp functions
+manual_invert_chr <- function(df, Q_chromosomes){
+  Q_chr <- Q_chromosomes$chr
+  reorientated_alignments <- data.frame(matrix(ncol = 10, nrow = 0))
+  colnames(reorientated_alignments) <- colnames(alignments)
+  for (q in Q_chr){
+    df_subset <- df[df$chrQ == q,]
+    if (Q_chromosomes[Q_chromosomes$chr == q,]$invert == "TRUE"){
+      print(q)
+      print('flip!')
+      Q_end_value <- max(df$Qend)
+      df_subset$Qstart <- (df_subset$Qstart - Q_end_value)*-1 # should technically be length of chr not R_end value
+      df_subset$Qend <- (df_subset$Qend - Q_end_value)*-1 # should technically be length of chr not R_end value
+      df_subset$Qstrand[df_subset$Qstrand == '-'] <- '--'
+      df_subset$Qstrand[df_subset$Qstrand == '+'] <- '-'
+      df_subset$Qstrand[df_subset$Qstrand == '--'] <- '+'
+      df_subset$Qstart_temp <- df_subset$Qstart
+      df_subset$Qstart <- df_subset$Qend
+      df_subset$Qend <- df_subset$Qstart_temp
+      df_subset <- subset(df_subset, select = -c(Qstart_temp))
+      reorientated_alignments <- rbind(reorientated_alignments, df_subset)
+    }
+    else{
+      print('no flip!')
+      reorientated_alignments <- rbind(reorientated_alignments, df_subset)
+    }
+    
+  }
+  return(reorientated_alignments)
+}
+
+
+
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library("dplyr"))
 
@@ -43,11 +77,11 @@ args$busco2 <-'test_data/Vanessa_cardui.tsv'
 args$chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
 args$chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
 args$alpha <- 0
-args$output_prefix <- 'test'
+args$output_prefix <- 'test_no_invert'
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
-minimum_buscos = 50
+minimum_buscos = 5
 
 ### read in data ###
 # algs <- read.csv(args$alg_file, sep='\t', header=FALSE)[,c(1,3)]
@@ -57,32 +91,25 @@ Q_df <- read_buscos(args$busco2, 'Q') # was Agrochola_circellaris.tsv
 R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
 Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
 
-# apply any filters
-alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
-R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR)
-Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ)
-
 #R_chromosomes <- R_chromosomes %>% arrange(desc(chr))
 #head(R_chromosomes)
 
 R_chromosomes <- R_chromosomes %>% arrange(order)
 Q_chromosomes <- Q_chromosomes %>% arrange(order)
+
+alignments <- merge(Q_df, R_df, by='busco')
+# apply any filters
+alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR)  
+Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ) 
 chr_order_R <- R_chromosomes$chr # extract order of chr
 chr_order_Q <- Q_chromosomes$chr #extract order of chr
 
-# TODO uncomment following lines
-# chr_order_R <- R_chromosomes[order(R_chromosomes$order), 'chromosome']
-# chr_order_Q <- Q_chromosomes[order(Q_chromosomes$order), 'chromosome']
-
-
-# OU611839.1 is fused in A. circellaris
-alignments <- merge(Q_df, R_df, by='busco')
 # alignments <- merge(alignments, algs, by='busco')
 # TODO: allow for algs in the arguments
 alignments$alg <- NA
+alignments <- manual_invert_chr(alignments, Q_chromosomes)
 
-alignments <- alignments[alignments$chrR %in% R_chromosomes$chr,] # specify which chr interested in 
-alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chr,] # specify which chr interested in 
 
 # TODO add chromosome order in the offset function
 offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
@@ -105,7 +132,7 @@ if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is grea
 }
 #adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
-pdf(paste0(output_prefix, '.pdf'))
+pdf(paste0(args$output_prefix, '.pdf'))
 
 plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1),(gap+1.5)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
@@ -172,3 +199,4 @@ dev.off()
 
 # chrom1 - M. cinxia REF
 # chrom2 - V. cardui  QUERY
+
