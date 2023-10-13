@@ -36,24 +36,31 @@ output_prefix <- args$output
 source('scripts/helper_functions.R') # import functions
 
 ### specify parameters
-# alg_file <- '../sup_tables/TableS4_Merian_element_definitions.tsv'
-# busco1 <- 'test_data/Melitaea_cinxia.tsv'
-# busco2 <- 'test_data/Vanessa_cardui.tsv'
+args <- list()
+args$alg_file <- '../sup_tables/TableS4_Merian_element_definitions.tsv'
+args$busco1 <- 'test_data/Melitaea_cinxia.tsv'
+args$busco2 <-'test_data/Vanessa_cardui.tsv'
+args$chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
+args$chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
+args$alpha <- 0
+args$output_prefix <- 'test'
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
-minimum_buscos = 5
-# output_prefix = 'test'
-# chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
-# chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
+minimum_buscos = 50
 
 ### read in data ###
-# algs <- read.csv(alg_file, sep='\t', header=FALSE)[,c(1,3)]
+# algs <- read.csv(args$alg_file, sep='\t', header=FALSE)[,c(1,3)]
 # colnames(algs) <- c('busco', 'alg')
-R_df <- read_buscos(busco1, 'R')
-Q_df <- read_buscos(busco2, 'Q') # was Agrochola_circellaris.tsv
-R_chromosomes <- read.table(chrom1, sep = '\t', header = TRUE)
-Q_chromosomes <- read.table(chrom2, sep = '\t', header = TRUE)
+R_df <- read_buscos(args$busco1, 'R')
+Q_df <- read_buscos(args$busco2, 'Q') # was Agrochola_circellaris.tsv
+R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
+Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
+
+# apply any filters
+alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR)
+Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ)
 
 #R_chromosomes <- R_chromosomes %>% arrange(desc(chr))
 #head(R_chromosomes)
@@ -76,11 +83,6 @@ alignments$alg <- NA
 
 alignments <- alignments[alignments$chrR %in% R_chromosomes$chr,] # specify which chr interested in 
 alignments <- alignments[alignments$chrQ %in% Q_chromosomes$chr,] # specify which chr interested in 
-
-#alignments <- alignments[alignments$chrQ %in% c('HG992236.1','HG992211.1','HG992210.1', 'HG992209.1','HG992235.1','HG992237.1'),] 
-
-alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
-#alignments <- merge(alignments, assignments)
 
 # TODO add chromosome order in the offset function
 offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
