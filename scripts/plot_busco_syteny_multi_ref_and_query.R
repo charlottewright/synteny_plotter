@@ -46,7 +46,7 @@ parser$add_argument("-chrom1",
                     help="A .tsv table with chromosomes of the species 1 (4 columns expected chromosome, length, order, direction)")
 parser$add_argument("-chrom2", 
                     help="A .tsv table with chromosomes of the species 2 (4 columns expected chromosome, length, order, direction)")
-parser$add_argument("-o", "--output", default = "synteny_plot",
+parser$add_argument("-o", "--output_prefix", default = "synteny_plot",
                     help="Name pattern for the output")
 parser$add_argument("-g", "-gap", type = "integer",
                     help="Gap between two chromosomal sets")
@@ -65,19 +65,19 @@ busco2 <- args$busco2
 chrom1 <- args$chrom1
 chrom2 <- args$chrom2
 # minimum_buscos <- args$filter
-output_prefix <- args$output
+# output_prefix <- args$output
 
 source('scripts/helper_functions.R') # import functions
 
 ### specify parameters
-args <- list()
-args$alg_file <- '../sup_tables/TableS4_Merian_element_definitions.tsv'
-args$busco1 <- 'test_data/Melitaea_cinxia.tsv'
-args$busco2 <-'test_data/Vanessa_cardui.tsv'
-args$chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
-args$chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
-args$alpha <- 0
-args$output_prefix <- 'test_no_invert'
+# args <- list()
+# args$alg_file <- '../sup_tables/TableS4_Merian_element_definitions.tsv'
+# args$busco1 <- 'test_data/Melitaea_cinxia.tsv'
+# args$busco2 <-'test_data/Vanessa_cardui.tsv'
+# args$chrom1 <- 'test_data/Melitaea_cinxia_info.tsv'
+# args$chrom2 <- 'test_data/Vanessa_cardui_info.tsv'
+# args$alpha <- 0
+# args$output_prefix <- 'test_no_invert'
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
@@ -96,6 +96,8 @@ Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
 
 R_chromosomes <- R_chromosomes %>% arrange(order)
 Q_chromosomes <- Q_chromosomes %>% arrange(order)
+
+print(R_chromosomes)
 
 alignments <- merge(Q_df, R_df, by='busco')
 # apply any filters
@@ -131,6 +133,8 @@ if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is grea
   adjustment_length_Q <-0
 }
 #adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
+
+print(head(alignments))
 
 pdf(paste0(args$output_prefix, '.pdf'))
 
