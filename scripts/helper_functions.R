@@ -42,7 +42,7 @@ trim_strings <- function(values, delimiter, index){
 }
 
 ## check order is matching in the two chr i.e. that one chr isn't flipped relative to the other
-orientate_chr <- function(df, ref_chr){
+auto_invert_chr <- function(df, ref_chr){
   df <- df[df$chrR == ref_chr,]
   df <- df %>% arrange(Qstart) # sort
   num_rows <- nrow(df) /20  # 5% of rows
