@@ -31,10 +31,6 @@ chromosomal_correspondences <- data.frame(chrQ = names(chromosomal_correspondenc
 chromosomal_correspondences$R_order <- R_chromosomes[chromosomal_correspondences$chrR, 'order']
 chromosomal_correspondences <- chromosomal_correspondences %>% arrange(R_order)  
 
-chromosomal_correspondences[1, 'chrQ']
-
-chr_row <- chromosomal_correspondences[1, ]
-
 test_invert <- function(chr_row){
     chr_aln <- alignments %>% filter(chrQ == as.character(chr_row['chrQ'])) %>%  filter(chrR == as.character(chr_row['chrR']))
     cortest <- cor.test(unlist(chr_aln[, 'Qstart']), unlist(chr_aln[, 'Rstart']))
