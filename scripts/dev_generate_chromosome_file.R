@@ -29,11 +29,27 @@ get_most_frequent_ref_hit <- function(chr){
 chromosomal_correspondences <- sapply(unique(alignments$chrQ), get_most_frequent_ref_hit)
 chromosomal_correspondences <- data.frame(chrQ = names(chromosomal_correspondences), chrR = as.character(chromosomal_correspondences))
 chromosomal_correspondences$R_order <- R_chromosomes[chromosomal_correspondences$chrR, 'order']
-chromosomal_correspondences <- chromosomal_correspondences %>% arrange(R_order)  %>% select(chrQ) 
+chromosomal_correspondences <- chromosomal_correspondences %>% arrange(R_order)  
 
-colnames(chromosomal_correspondences) <- 'chr'
+chromosomal_correspondences[1, 'chrQ']
+
+chr_row <- chromosomal_correspondences[1, ]
+
+test_invert <- function(chr_row){
+    chr_aln <- alignments %>% filter(chrQ == as.character(chr_row['chrQ'])) %>%  filter(chrR == as.character(chr_row['chrR']))
+    cortest <- cor.test(unlist(chr_aln[, 'Qstart']), unlist(chr_aln[, 'Rstart']))
+    if (cortest$estimate < 0){
+        return (TRUE)
+    }
+    return (FALSE)    
+}
+
 chromosomal_correspondences$order <- 1:nrow(chromosomal_correspondences)
-chromosomal_correspondences$invert <- FALSE
+chromosomal_correspondences$invert <- apply(chromosomal_correspondences, 1, test_invert)
+
+
+chromosomal_correspondences <- chromosomal_correspondences %>% select(c(chrQ, order, invert)) 
+colnames(chromosomal_correspondences)[1] <- 'chr'
 
 write.table(chromosomal_correspondences, 'test_data/Vanessa_cardui_info_generated.tsv', sep = '\t', row.names = FALSE, col.names = TRUE, quote = FALSE)
 
