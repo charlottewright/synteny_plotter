@@ -5,7 +5,7 @@ A tool to visualise synteny relationships between genomes.
 Testing run
 
 ```
-Rscript scripts/plot_busco_syteny_multi_ref_and_query.R -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_info.tsv -o test_data/test
+Rscript scripts/generate_synteny_plot.R -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_info.tsv -o test_data/test
 ```
 
 ## automated generator of chromoamal order
@@ -19,9 +19,9 @@ Rscript scripts/dev_generate_chromosome_file.R
 Now I would like to compare the manual and generated versions
 
 ```
-Rscript scripts/plot_busco_syteny_multi_ref_and_query.R -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_curated_info.tsv -o test_data/test_curated
+Rscript scripts/generate_synteny_plot.R  -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_curated_info.tsv -o test_data/test_curated
 
-Rscript scripts/plot_busco_syteny_multi_ref_and_query.R -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_info_generated.tsv -o test_data/test_generated
+Rscript scripts/generate_synteny_plot.R -busco1 test_data/Melitaea_cinxia.tsv -busco2 test_data/Vanessa_cardui.tsv -chrom1 test_data/Melitaea_cinxia_info.tsv -chrom2 test_data/Vanessa_cardui_info_generated.tsv -o test_data/test_generated
 ```
 
 The order seems to work well.
