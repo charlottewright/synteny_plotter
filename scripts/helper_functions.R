@@ -9,11 +9,52 @@ read_buscos <- function(file_name, prefix){
     # TODO: add warning here
     df[, chr_label] <- trim_strings(trim_strings(df[, chr_label], ":", 2), "[|]", 2)
   }
+  if ( any(grepl("[:]", df[, chr_label])) ){
+    # TODO: add warning here
+    df[, chr_label] <- trim_strings(df[, chr_label], ":", 1)
+  }
   df <- df[df$status == "Complete",]
   df <- subset(df, select=-c(status))
   return(df)
 }
 
+####### generate query function #####
+
+get_most_frequent_ref_hit <- function(chr, alignments){
+    hit_table <- alignments %>% filter(chrQ == chr) %>% select(chrR) %>% table
+    names(hit_table)[which.max(hit_table)]
+}
+
+test_invert <- function(chr_row, alignments){
+    chr_aln <- alignments %>% filter(chrQ == as.character(chr_row['chrQ'])) %>%  filter(chrR == as.character(chr_row['chrR']))
+    cortest <- cor.test(unlist(chr_aln[, 'Qstart']), unlist(chr_aln[, 'Rstart']))
+    if (cortest$estimate < 0){
+        return (TRUE)
+    }
+    return (FALSE)    
+}
+
+generate_auto_query_order <- function(chromosomes_R, busco_R, busco_Q){
+
+    alignments <- merge(busco_Q, busco_R, by='busco') # merging Ref and Query tables into one by BUSCO IDs
+    chromosomal_correspondences <- sapply(unique(alignments[ ,'chrQ']), get_most_frequent_ref_hit, alignments) # gets the chromosome with the highest number of hits
+    chromosomal_correspondences <- data.frame(chrQ = names(chromosomal_correspondences), chrR = as.character(chromosomal_correspondences)) # making a table out of it
+
+    row.names(chromosomes_R) <- chromosomes_R$chr # naming rows for easier extraction
+    chromosomal_correspondences$R_order <- chromosomes_R[chromosomal_correspondences$chrR, 'order'] # adding reference order to the table
+
+    chromosomal_correspondences <- chromosomal_correspondences %>% arrange(R_order) # orderining by the final order, here we would add some additional ordering parameters
+
+    chromosomal_correspondences$order <- 1:nrow(chromosomal_correspondences) # to give each a unique order number in case there is two chr map to the same ref chr
+    chromosomal_correspondences$invert <- apply(chromosomal_correspondences, 1, test_invert, alignments)
+    chromosomal_correspondences <- chromosomal_correspondences %>% select(c(chrQ, order, invert)) 
+    colnames(chromosomal_correspondences)[1] <- 'chr' 
+
+    chromosomal_correspondences
+}
+
+
+#######
 
 #make a polygon from two lines - SIMON
 lines.to.poly <- function(l1,l2, col=NULL, border=NULL, lwd=NULL){
@@ -43,7 +84,7 @@ trim_strings <- function(values, delimiter, index){
 manual_invert_chr <- function(df, Q_chromosomes){
   Q_chr <- Q_chromosomes$chr
   reorientated_alignments <- data.frame(matrix(ncol = length(df), nrow = 0))
-  colnames(reorientated_alignments) <- colnames(alignments)
+  colnames(reorientated_alignments) <- colnames(df)
   for (q in Q_chr){
     df_subset <- df[df$chrQ == q,]
     if (Q_chromosomes[Q_chromosomes$chr == q,]$invert == "TRUE"){
