@@ -27,9 +27,12 @@ args <- parser$parse_args()
 
 busco1 <- args$busco1
 busco2 <- args$busco2
+busco3 <- args$busco3
 # gap <- args$gap
-chrom1 <- args$chrom1
-chrom2 <- args$chrom2
+chrom1 <- args$chrom1 # REF
+chrom2 <- args$chrom2 # QEURY
+chrom3 <- args$chrom3
+
 # minimum_buscos <- args$filter
 # output_prefix <- args$output
 
@@ -49,50 +52,59 @@ minimum_buscos = 5
 # alignments <- merge(alignments, algs, by='busco')
 
 R_df <- read_buscos(args$busco1, 'R')
-Q_df <- read_buscos(args$busco2, 'Q') # was Agrochola_circellaris.tsv
+#Q_df <- read_buscos(args$busco2, 'Q') 
 R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
-Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
-
+#Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
 R_chromosomes <- R_chromosomes %>% arrange(order)
-Q_chromosomes <- Q_chromosomes %>% arrange(order)
-alignments <- merge(Q_df, R_df, by='busco')
 
-# apply any filters
-alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
-R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR)  
-Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ) 
-chr_order_R <- R_chromosomes$chr # extract order of chr
-chr_order_Q <- Q_chromosomes$chr #extract order of chr
-
-alignments$alg <- NA
-alignments <- manual_invert_chr(alignments, Q_chromosomes)
-
-offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
-offset_alignments_RQ <- offset_chr(offset_alignments_Q$df, 'R', chr_offset, chr_order_R)
-alignments <- offset_alignments_RQ$df
-offset_list_R <- offset_alignments_RQ$offset_list
-offset_list_Q <- offset_alignments_Q$offset_list
-#chr_order_R <- offset_alignments_RQ$chr_order
-#chr_order_Q <- offset_alignments_Q$chr_order
-
-rough_max_end <-  max(max(alignments$Qend), max(alignments$Rend))
-plot_length = rough_max_end  # make this nicer
-# if want to centre the query chr:
-if (max(alignments$Rend) > max(alignments$Qend)) { # if total ref length is greater than total query length, then plot size & adjustment is dictated by ref
-  adjustment_length_Q <- (max(alignments$Rend) - max(alignments$Qend)) / 2  # i.e. half the difference between the two
-  adjustment_length_R <- 0
-} else{
-  adjustment_length_R <- (max(alignments$Qend) - max(alignments$Rend)) / 2
-  adjustment_length_Q <-0
+make_alignment_table <- function(R_df, R_chromosomes, Q_df, Q_chromosomes){
+  alignments <- merge(Q_df, R_df, by='busco')
+  # apply any filters
+  alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+  R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR)  
+  Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ) 
+  R_chromosomes <- R_chromosomes %>% arrange(order)
+  chr_order_R <- R_chromosomes$chr # extract order of chr
+  Q_chromosomes <- Q_chromosomes %>% arrange(order)
+  chr_order_Q <- Q_chromosomes$chr #extract order of chr
+  print(Q_chromosomes)
+  print(chr_order_Q)
+  alignments$alg <- NA
+  alignments <- manual_invert_chr(alignments, Q_chromosomes)
+  offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
+  offset_alignments_RQ <- offset_chr(offset_alignments_Q$df, 'R', chr_offset, chr_order_R)
+  alignments <- offset_alignments_RQ$df
+  offset_list_R <- offset_alignments_RQ$offset_list
+  offset_list_Q <- offset_alignments_Q$offset_list
+  output_list <- list('alignments' = alignments, 'chr_order_R' = chr_order_R, 'chr_order_Q'=chr_order_Q,
+                      'offset_list_R'=offset_list_R, 'offset_list_Q'=offset_list_Q)
+  return(output_list)
 }
-#adjustment_length <- (max(alignments$Rend) - max(alignments$Qend)) / 2 # i.e. half the difference between the two
 
-print(head(alignments))
+counter = 1
+max_ends <- list()
+max_chr_set <- 'R'
+processed_Q_list <- list()
+for (i in args$busco_list){
+  Q_chromosomes <- read.table(args$chrom_list[counter], sep = '\t', header = TRUE)
+  Q_df <- read_buscos(i, 'Q')  
+  processed_Q <- make_alignment_table(R_df, R_chromosomes, Q_df, Q_chromosomes)
+  alignments <- processed_Q$alignments
+  print(i)
+  print(head(alignments))
+  processed_Q_list <- append(processed_Q_list, processed_Q)
+  counter = counter + 1
+  max_ends <- append(max_ends, max(alignments$Rend))
+  max_ends <- append(max_ends, max(alignments$Qend))
+  R_df <- Q_df # Q1 becomes ref for next iteration (Q2)
+  colnames(R_df) <- c('busco', 'chrR', 'Rstart', 'Rend', 'Rstrand')
+  R_chromosomes <- Q_chromosomes
+}
+max_end <- max(unlist(max_ends))
+plot_length <- max_end # make plot_length the max of the longest chr set
 
 pdf(paste0(args$output_prefix, '.pdf'))
-
-plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1),(gap+1.5)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
-
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(args$busco_list)*2),((gap+1)*length(args$busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 if (length(chr_order_R) <= 6){
   col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
@@ -101,59 +113,102 @@ if (length(chr_order_R) <= 6){
                        '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
                        '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
 }
-counter <- 1
-
 col_list <- sapply(col_list, t_col, args$alpha)
 
-for (i in chr_order_R){
-  temp <- alignments[alignments$chrR == i,]
-  plot_one_ref_chr(temp, col_list[[counter]], "red", adjustment_length_R, adjustment_length_Q)
-  counter <- counter + 1
-}
+main_counter <- 1
+y_offset <- 0
+y_increment <- 17
+for (i in args$busco_list){
+  print(i)
+  print(tail(alignments))
+  alignments <- processed_Q_list[[main_counter]]
+  chr_order_R <- processed_Q_list[[main_counter+1]]
+  chr_order_Q <- processed_Q_list[[main_counter+2]]
+  offset_list_R <- processed_Q_list[[main_counter+3]]
+  offset_list_Q <- processed_Q_list[[main_counter+4]]
+  
+  if (max(alignments$Qend) != max_end){ # i.e. if this is the longest chr_set
+    if (max(alignments$Rend) != max_end){
+      adjustment_length_R <- (max_end - max(alignments$Rend)) / 2 
+      adjustment_length_Q <- (max_end - max(alignments$Qend)) / 2 
+    }
+    else{
+      adjustment_length_R <- 0
+      adjustment_length_Q <- (max_end - max(alignments$Qend)) / 2 
+    }
+  }
+  else{
+    adjustment_length_Q <- 0
+    adjustment_length_R <- (max_end - max(alignments$Rend)) / 2 
+  }
+  counter <- 1
+  for (i in chr_order_R){
+      temp <- alignments[alignments$chrR == i,]
+      plot_one_ref_chr(temp, col_list[[counter]], "red", adjustment_length_R, adjustment_length_Q, y_offset)
+      counter <- counter + 1
+  }
+  
+  counter <- 1  # chr outlines for query
+  for (i in chr_order_Q){
+      temp <- alignments[alignments$chrQ == i,]
+      Qfirst <- min(temp$Qstart)
+      Qlast <- max(temp$Qend)
+      segments(Qfirst+adjustment_length_Q, 1-gap-y_offset, Qlast+adjustment_length_Q, 1-gap-y_offset, lwd = 5)
+    }
+  
+  if (main_counter == 1){ # only need to plot ref if this is the first chr set being plotted, else get duplicates
+    counter <- 1   # chr outlines for ref
+    for (i in chr_order_R){
+      temp <- alignments[alignments$chrR == i,]
+      Rfirst <- min(temp$Rstart)
+      Rlast <- max(temp$Rend)
+      segments(Rfirst+adjustment_length_R, gap, Rlast+adjustment_length_R, gap, lwd = 5)
+    }
+    counter <- 1    # text labels for ref
+    for (i in chr_order_R){
+      temp <- alignments[alignments$chrR == i,]
+      Rfirst <- min(temp$Rstart)
+      Rlast <- max(temp$Rend)
+      offset <- offset_list_R[[counter]]
+      text(x = ((Rlast+Rfirst+1)/2)+adjustment_length_R, y = gap+3.5, label = i,
+           srt = 90, cex=0.5) # Rotation
+      counter <- counter + 1
+    }
+  }
 
-## chr outlines for query:
-counter <- 1
-for (i in chr_order_Q){
-  temp <- alignments[alignments$chrQ == i,]
-  Qfirst <- min(temp$Qstart)
-  Qlast <- max(temp$Qend)
-  segments(Qfirst+adjustment_length_Q, 1-gap, Qlast+adjustment_length_Q, 1-gap, lwd = 5)
-}
-
-## chr outlines for ref:
-counter <- 1
-for (i in chr_order_R){
-  temp <- alignments[alignments$chrR == i,]
-  Rfirst <- min(temp$Rstart)
-  Rlast <- max(temp$Rend)
-  segments(Rfirst+adjustment_length_R, gap, Rlast+adjustment_length_R, gap, lwd = 5)
-}
-
-## text labels for ref:
-counter <- 1
-for (i in chr_order_R){
-  temp <- alignments[alignments$chrR == i,]
-  Rfirst <- min(temp$Rstart)
-  Rlast <- max(temp$Rend)
-  offset <- offset_list_R[[counter]]
-  text(x = ((Rlast+Rfirst+1)/2)+adjustment_length_R, y = (gap+1.5), label = i,
-       srt = 90, cex=0.5) # Rotation
-  counter <- counter + 1
-}
-
-## text labels for query:
-counter <- 1
-for (i in chr_order_Q){
-  temp <- alignments[alignments$chrQ == i,]
-  Qfirst <- min(temp$Qstart)
-  Qlast <- max(temp$Qend)
-  text(x = ((Qlast+Qfirst+1)/2)+adjustment_length_Q, y = (gap+0.5)*-1, label = i,
-       srt = 90, cex=0.5) # Rotation
-  counter <- counter + 1
-}
+  counter <- 1  # text labels for query:
+  for (i in chr_order_Q){
+      temp <- alignments[alignments$chrQ == i,]
+      Qfirst <- min(temp$Qstart)
+      Qlast <- max(temp$Qend)
+      text(x = ((Qlast+Qfirst+1)/2)+adjustment_length_Q, y = -gap-2-y_offset, label = i,
+           srt = 90, cex=0.5) # Rotation
+      counter <- counter + 1
+  }
+  main_counter <- main_counter + 5
+  y_offset <- y_offset + y_increment
+  }
 
 dev.off()
 
-# chrom1 - M. cinxia REF
-# chrom2 - V. cardui  QUERY
+main_counter <- 1
+for (i in args$busco_list){
+  alignments <- processed_Q_list[[main_counter]]
+  chr_order_R <- processed_Q_list[[main_counter+1]]
+  chr_order_Q <- processed_Q_list[[main_counter+2]]
+  offset_list_R <- processed_Q_list[[main_counter+3]]
+  offset_list_Q <- processed_Q_list[[main_counter+4]]
+  main_counter <- main_counter + 5
+  print(chr_order_R)
+}
+
+# seems order in Q_chromosomes is obeyed when the species is the reference but not when its the query
+
+
+# 1.) determine diominant (mode) ref chr per query chr - use as order i.e. assuming ref is fixed
+# 2.) sort groups of query that map to same ref by average ref start
+# 3.) calculate correlation - if negative, invert
+# 4.) output settings table
+
+# TODO - change input table to be one per run rather than one per species, means adding a species column
 

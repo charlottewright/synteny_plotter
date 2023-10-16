@@ -42,13 +42,11 @@ trim_strings <- function(values, delimiter, index){
 }
 manual_invert_chr <- function(df, Q_chromosomes){
   Q_chr <- Q_chromosomes$chr
-  reorientated_alignments <- data.frame(matrix(ncol = 10, nrow = 0))
+  reorientated_alignments <- data.frame(matrix(ncol = length(df), nrow = 0))
   colnames(reorientated_alignments) <- colnames(alignments)
   for (q in Q_chr){
     df_subset <- df[df$chrQ == q,]
     if (Q_chromosomes[Q_chromosomes$chr == q,]$invert == "TRUE"){
-      print(q)
-      print('flip!')
       Q_end_value <- max(df$Qend)
       df_subset$Qstart <- (df_subset$Qstart - Q_end_value)*-1 # should technically be length of chr not R_end value
       df_subset$Qend <- (df_subset$Qend - Q_end_value)*-1 # should technically be length of chr not R_end value
@@ -61,8 +59,7 @@ manual_invert_chr <- function(df, Q_chromosomes){
       df_subset <- subset(df_subset, select = -c(Qstart_temp))
       reorientated_alignments <- rbind(reorientated_alignments, df_subset)
     }
-    else{
-      print('no flip!')
+    else{ # no flip!
       reorientated_alignments <- rbind(reorientated_alignments, df_subset)
     }
     
@@ -107,10 +104,8 @@ offset_chr <- function(df, q_or_r, chr_offset, chr_order){
   chrStart <- paste0(q_or_r, 'start')
   chrEnd <- paste0(q_or_r, 'end')
   for (i in chr_order){
-    print(i)
     chr_df <- df[df[[chr_prefix]] == i,]
     max_end <- max(chr_df[[chrStart]])
-    print(max_end)
     if (counter != 0){ # only need to offset start/end if this is not the first chr
       chr_df <- chr_df %>% arrange(Rstart) # sort by ref regardless of it ref or query
       chr_df[[chrStart]] <- chr_df[[chrStart]] + offset  # allows for accumulative chr positions
@@ -125,7 +120,7 @@ offset_chr <- function(df, q_or_r, chr_offset, chr_order){
   return(output_list)
 }
 
-plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_length_Q){ 
+plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_length_Q, y_offset){ 
   df$Qstart <- df$Qstart + adjustment_length_Q
   df$Qend <- df$Qend + adjustment_length_Q
   df$Rstart <- df$Rstart + adjustment_length_R
@@ -139,8 +134,8 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_len
   border = ifelse(sign(Rends - Rstarts) == sign(Qends - Qstarts), cols[1], cols[2]) # if R&Q are same sign, use blue, else use red
   col = border
   for (i in 1:nrow(df)){ # curved lines- sigmoid connector = x1,y1,x2,y2
-    lines.to.poly(sigmoid.connector(Qstarts[i], 1-gap, Rstarts[i], 0+gap, vertical=T),
-                  sigmoid.connector(Qends[i], 1-gap, Rends[i], 0+gap, vertical=T),
+    lines.to.poly(sigmoid.connector(Qstarts[i], 1-gap-y_offset, Rstarts[i], 0+gap-y_offset, vertical=T),
+                  sigmoid.connector(Qends[i], 1-gap-y_offset, Rends[i], 0+gap-y_offset, vertical=T),
                   col = col[i], border=ifelse(show_outline==FALSE, NA, border[i]), lwd=lwd)
   }
 }
