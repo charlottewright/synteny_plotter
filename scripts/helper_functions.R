@@ -50,7 +50,7 @@ generate_auto_query_order <- function(chromosomes_R, busco_R, busco_Q){
     chromosomal_correspondences <- chromosomal_correspondences %>% select(c(chrQ, order, invert)) 
     colnames(chromosomal_correspondences)[1] <- 'chr' 
 
-    chromosomal_correspondences
+    return(chromosomal_correspondences)
 }
 
 
@@ -81,14 +81,14 @@ trim_strings <- function(values, delimiter, index){
   sapply(strsplit(values, delimiter), function(x){ x[index] })
   
 }
-manual_invert_chr <- function(df, Q_chromosomes){
+perform_inverts <- function(df, Q_chromosomes){
   Q_chr <- Q_chromosomes$chr
   reorientated_alignments <- data.frame(matrix(ncol = length(df), nrow = 0))
   colnames(reorientated_alignments) <- colnames(df)
   for (q in Q_chr){
     df_subset <- df[df$chrQ == q,]
     if (Q_chromosomes[Q_chromosomes$chr == q,]$invert == "TRUE"){
-      Q_end_value <- max(df$Qend)
+      Q_end_value <- max(df_subset$Qend)
       df_subset$Qstart <- (df_subset$Qstart - Q_end_value)*-1 # should technically be length of chr not R_end value
       df_subset$Qend <- (df_subset$Qend - Q_end_value)*-1 # should technically be length of chr not R_end value
       df_subset$Qstrand[df_subset$Qstrand == '-'] <- '--'
