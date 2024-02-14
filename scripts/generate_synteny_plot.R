@@ -120,7 +120,7 @@ for (i in args$busco_list){
 max_end <- max(unlist(max_ends))
 plot_length <- max_end # make plot_length the max of the longest chr set
 
-#pdf(paste0(args$output_prefix, '.pdf'))
+pdf(paste0(args$output_prefix, '.pdf'))
 plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(args$busco_list)*2),((gap+1)*length(args$busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 if (nrow(R_chromosomes) <= 6){
