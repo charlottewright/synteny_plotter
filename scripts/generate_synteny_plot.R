@@ -18,35 +18,31 @@ parser$add_argument("-o", "--output_prefix", default = "synteny_plot",
                     help="Name pattern for the output")
 parser$add_argument("-g", "-gap", type = "integer",
                     help="Gap between two chromosomal sets")
-parser$add_argument("-f", "-filter", type = "integer",
+parser$add_argument("-f", "-filter", type = "integer", default=5,
                     help="The minimal number of BUSCOs on a chromosome to include")
 parser$add_argument("-alpha", type = "integer", default = 0,
                     help="Set transparency to colours [%]")
 args <- parser$parse_args()
-source('scripts/interactive_args.R')
+
+#source('scripts/interactive_args.R')
 
 ### specify arguments ###
-minimum_buscos <- args$filter
+minimum_buscos <- args$f
 busco1 <- args$busco1
-if (length(busco_list) == 1){ # i.e. if running from command line - need to make a list from the inputed file name(s)
+
+print('[+] Processing list of query file(s):')
+print(args$busco_list)
+
+if (length(args$busco_list) == 1){ # i.e. if running from command line - need to make a list from the inputed file name(s)
   busco_list <- strsplit(args$busco_list, " ")[[1]]
   chrom_list <- strsplit(args$chrom_list, " ")[[1]]
 }
 
-#busco2 <- args$busco2
-#busco3 <- args$busco3
-# gap <- args$gap
 chrom1 <- args$chrom1 # REF
-#chrom2 <- args$chrom2 # QEURY
-#chrom3 <- args$chrom3
-
-# minimum_buscos <- args$filter
-# output_prefix <- args$output
-
 source('scripts/helper_functions.R') # import functions
 
-
 ### specify parameters
+gap <- args$gap
 gap=6
 show_outline = TRUE
 chr_offset = 20000000 # TODO make this automatically a prop of chr length
@@ -76,10 +72,10 @@ make_alignment_table <- function(R_df, R_chromosomes, Q_df, Q_chromosomes){
   chr_order_Q <- Q_chromosomes$chr #extract order of chr
   # print(Q_chromosomes)
   # print(chr_order_Q)
-  print('R_chr:') 
-  print(R_chromosomes)
-  print('chr_order_R')
-  print(chr_order_R)
+  #print('R_chr:') 
+  #print(R_chromosomes)
+  #print('chr_order_R')
+  #print(chr_order_R)
   alignments$alg <- NA
   alignments <- perform_inverts(alignments, Q_chromosomes) 
   offset_alignments_Q <- offset_chr(alignments, 'Q', chr_offset, chr_order_Q)
@@ -123,20 +119,28 @@ for (i in args$busco_list){
 }
 
 
-
 max_end <- max(unlist(max_ends))
 plot_length <- max_end # make plot_length the max of the longest chr set
 
 pdf(paste0(args$output_prefix, '.pdf'))
+print('[+] Generating plot')
 plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(args$busco_list)*2),((gap+1)*length(args$busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 if (nrow(R_chromosomes) <= 6){
   col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
-} else { col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
+} else { 
+  col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
                        '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
                        '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
                        '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
-}
+  num_remove <- length(col_list) - nrow(R_chromosomes)
+  if (num_remove > 0){
+    set.seed(123) # set a random seed for reproducibility
+    indices_to_remove <- sample(length(col_list), num_remove) # get random indices of elements to remove
+    my_list_cleaned <- col_list[-indices_to_remove] # remove elements from the list using negative indexing
+    col_list <- my_list_cleaned
+    }
+  }
 
 if (nrow(R_chromosomes) > 31){
 col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
@@ -149,14 +153,8 @@ col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', 
               '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
 }
 
-num_remove <- length(col_list) - nrow(R_chromosomes) 
-print(num_remove)
-set.seed(123) # set a random seed for reproducibility
-indices_to_remove <- sample(length(col_list), num_remove) # get random indices of elements to remove
-my_list_cleaned <- col_list[-indices_to_remove] # remove elements from the list using negative indexing
 
 col_list <- sapply(col_list, t_col, args$alpha)
-
 
 main_counter <- 1
 y_offset <- 0
@@ -167,7 +165,6 @@ for (i in args$busco_list){
   alignments <- processed_Q_list[[main_counter]]
   chr_order_R <- processed_Q_list[[main_counter+1]]
   chr_order_Q <- processed_Q_list[[main_counter+2]]
-  print(chr_order_R)
   offset_list_R <- processed_Q_list[[main_counter+3]]
   offset_list_Q <- processed_Q_list[[main_counter+4]]
   
@@ -248,6 +245,7 @@ for (i in args$busco_list){
   # print(chr_order_R)
 }
 
+q()
 # seems order in Q_chromosomes is obeyed when the species is the reference but not when its the query
 
 # if we start saving the tabs, something like this works well
