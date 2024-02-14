@@ -5,13 +5,15 @@ suppressPackageStartupMessages(library("dplyr"))
 
 parser <- ArgumentParser()
 parser$add_argument("-busco1",
-                    help="Busco \"full_table.tsv\" of the top species")
-parser$add_argument("-busco2", 
-                    help="Busco \"full_table.tsv\" of the bottom species")
+                    help="Busco \"full_table.tsv\" of the reference (top) species")
+#parser$add_argument("-busco2", 
+#                    help="Busco \"full_table.tsv\" of the bottom species")
 parser$add_argument("-chrom1", 
-                    help="A .tsv table with chromosomes of the species 1 (4 columns expected chromosome, length, order, direction)")
-parser$add_argument("-chrom2", 
-                    help="A .tsv table with chromosomes of the species 2 (4 columns expected chromosome, length, order, direction)")
+                    help="A .tsv table with chromosomes of the reference species (4 columns expected chromosome, length, order, direction)")
+parser$add_argument("-busco_list", 
+                    help="A list of Busco \"full_table.tsv\" of the one or more query species ")
+parser$add_argument("-chrom_list", 
+                    help="A list of .tsv tables with chromosomes of the one or more query species (4 columns expected chromosome, length, order, direction)")
 parser$add_argument("-o", "--output_prefix", default = "synteny_plot",
                     help="Name pattern for the output")
 parser$add_argument("-g", "-gap", type = "integer",
@@ -26,6 +28,11 @@ source('scripts/interactive_args.R')
 ### specify arguments ###
 minimum_buscos <- args$filter
 busco1 <- args$busco1
+if (length(busco_list) == 1){ # i.e. if running from command line - need to make a list from the inputed file name(s)
+  busco_list <- strsplit(args$busco_list, " ")[[1]]
+  chrom_list <- strsplit(args$chrom_list, " ")[[1]]
+}
+
 #busco2 <- args$busco2
 #busco3 <- args$busco3
 # gap <- args$gap
