@@ -2,6 +2,15 @@
 
 A tool to visualise synteny relationships between genomes.
 
+Installation
+
+```
+conda create synteny_plotter
+conda activate synteny_plotter
+conda install conda-forge::r-dplyr
+conda install -c conda-forge r-argparse
+```
+
 Testing run
 
 ```
