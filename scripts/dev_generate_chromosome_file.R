@@ -1,11 +1,26 @@
 suppressPackageStartupMessages(library("argparse"))
 suppressPackageStartupMessages(library("dplyr"))
 
+parser <- ArgumentParser()
+parser$add_argument("-busco1",
+                    help="Busco \"full_table.tsv\" of the reference (top) species")
+parser$add_argument("-busco2", 
+                    help="Busco \"full_table.tsv\" of the query (bottom) species")
+parser$add_argument("-o", "--output_prefix", default = "synteny_plot",
+                    help="Name pattern for the output")
+parser$add_argument("-f", "-filter", type = "integer",
+                    help="The minimal number of BUSCOs on a chromosome to include")
+
+args <- parser$parse_args()
 source('scripts/helper_functions.R')
 source('scripts/interactive_args.R')
 
-minimum_buscos = 5
+minimum_buscos = args$filter
 
+# uncomment if running manually
+#args$busco1 <-'test_data/Melitaea_cinxia.tsv'
+#args$busco2 <-'test_data/Vanessa_cardui.tsv'
+#args$output_prefix <- 'test_two_species'
 
 R_df <- read_buscos(args$busco1, 'R')
 Q_df <- read_buscos(args$busco2, 'Q') # was Agrochola_circellaris.tsv
@@ -14,13 +29,13 @@ R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
 R_chromosomes <- R_chromosomes %>% arrange(order)
 
 # apply any filters
-R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR) # removing those with no / fwe BUSCO genes fromt he reference chr table
+R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR) # removing those with no / few BUSCO genes from the reference chr table
 
 ######## till here it's what is in the origin thingy
 
-generate_auto_query_order(R_chromosomes, R_df, Q_df)
+chromosomal_correspondences <- generate_auto_query_order(R_chromosomes, R_df, Q_df)
 
 
-# write.table(chromosomal_correspondences, 'test_data/Vanessa_cardui_info_generated.tsv', sep = '\t', row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(chromosomal_correspondences, paste0(args$output_prefix, '.auto_generated.tsv'), sep = '\t', row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 

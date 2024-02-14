@@ -37,14 +37,14 @@ test_invert <- function(chr_row, alignments){
 generate_auto_query_order <- function(chromosomes_R, busco_R, busco_Q){
 
     alignments <- merge(busco_Q, busco_R, by='busco') # merging Ref and Query tables into one by BUSCO IDs
+    print(alignments)
     chromosomal_correspondences <- sapply(unique(alignments[ ,'chrQ']), get_most_frequent_ref_hit, alignments) # gets the chromosome with the highest number of hits
     chromosomal_correspondences <- data.frame(chrQ = names(chromosomal_correspondences), chrR = as.character(chromosomal_correspondences)) # making a table out of it
 
     row.names(chromosomes_R) <- chromosomes_R$chr # naming rows for easier extraction
     chromosomal_correspondences$R_order <- chromosomes_R[chromosomal_correspondences$chrR, 'order'] # adding reference order to the table
-
     chromosomal_correspondences <- chromosomal_correspondences %>% arrange(R_order) # orderining by the final order, here we would add some additional ordering parameters
-
+  #  print(chromosomal_correspondences)
     chromosomal_correspondences$order <- 1:nrow(chromosomal_correspondences) # to give each a unique order number in case there is two chr map to the same ref chr
     chromosomal_correspondences$invert <- apply(chromosomal_correspondences, 1, test_invert, alignments)
     chromosomal_correspondences <- chromosomal_correspondences %>% select(c(chrQ, order, invert)) 
