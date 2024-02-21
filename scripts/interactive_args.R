@@ -35,6 +35,6 @@ args$busco1 <- 'marcela_data/xbHipHipp8_full_table.tsv'
 args$chrom1 <- 'marcela_data/xbHipHipp8.test.auto_generated.tsv'
 args$alpha <- 0
 args$output_prefix <- 'test_marcela_hiphip'
-args$busco_list <- 'marcela_data/xbTriDera4_full_table.tsv marcela_data/Tridacna_crocea_full_table.tsv'
-args$chrom_list <-'marcela_data/xbTriDera4.test.auto_generated.tsv marcela_data/Tridacna_crocea.test.hiphip.auto_generated.tsv'
+args$busco_list <- c('marcela_data/xbTriDera4_full_table.tsv', 'marcela_data/Tridacna_crocea_full_table.tsv')
+args$chrom_list <-c('marcela_data/xbTriDera4.test.auto_generated.tsv', 'marcela_data/Tridacna_crocea.test.hiphip.auto_generated.tsv')
 args$filter <- 37

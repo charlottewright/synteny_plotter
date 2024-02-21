@@ -29,14 +29,11 @@ args <- parser$parse_args()
 ### specify arguments ###
 minimum_buscos <- args$f
 busco1 <- args$busco1
+busco_list = args$busco_list
+chrom_list = args$chrom_list
 
 print('[+] Processing list of query file(s):')
 print(args$busco_list)
-
-if (length(args$busco_list) == 1){ # i.e. if running from command line - need to make a list from the inputed file name(s)
-  busco_list <- strsplit(args$busco_list, " ")[[1]]
-  chrom_list <- strsplit(args$chrom_list, " ")[[1]]
-}
 
 chrom1 <- args$chrom1 # REF
 source('scripts/helper_functions.R') # import functions
