@@ -27,6 +27,9 @@ get_most_frequent_ref_hit <- function(chr, alignments){
 
 test_invert <- function(chr_row, alignments){
     chr_aln <- alignments %>% filter(chrQ == as.character(chr_row['chrQ'])) %>%  filter(chrR == as.character(chr_row['chrR']))
+    if (nrow(chr_aln) > 1){
+      return (FALSE)
+    }
     cortest <- cor.test(unlist(chr_aln[, 'Qstart']), unlist(chr_aln[, 'Rstart']))
     if (cortest$estimate < 0){
         return (TRUE)

@@ -10,9 +10,9 @@ parser$add_argument("-busco1",
 #                    help="Busco \"full_table.tsv\" of the bottom species")
 parser$add_argument("-chrom1", 
                     help="A .tsv table with chromosomes of the reference species (4 columns expected chromosome, length, order, direction)")
-parser$add_argument("-busco_list", 
+parser$add_argument("-busco_list", nargs='+',
                     help="A list of Busco \"full_table.tsv\" of the one or more query species ")
-parser$add_argument("-chrom_list", 
+parser$add_argument("-chrom_list", nargs='+',
                     help="A list of .tsv tables with chromosomes of the one or more query species (4 columns expected chromosome, length, order, direction)")
 parser$add_argument("-o", "--output_prefix", default = "synteny_plot",
                     help="Name pattern for the output")
@@ -93,10 +93,12 @@ max_ends <- list()
 max_chr_set <- 'R'
 processed_Q_list <- list()
 
-for (i in args$busco_list){
-  temp_R_chromosomes <- R_chromosomes
+#busco_list = c("marcela_data/xbTriDera4_full_table.tsv")
+temp_R_chromosomes <- R_chromosomes
+for (i in busco_list){
+#  temp_R_chromosomes <- R_chromosomes
   Q_df <- read_buscos(i, 'Q')  
-  Q_chromosomes <- read.table(args$chrom_list[counter], sep = '\t', header = TRUE)
+  Q_chromosomes <- read.table(chrom_list[counter], sep = '\t', header = TRUE)
   # the following three lines have been commented out as now query_chr_file is now generated with an auto order based on 'dev_generate_chromosome_file.R' before running this script
   #Q_chromosomes_auto <- generate_auto_query_order(temp_R_chromosomes, R_df, Q_df) # - maybe the function needs to be a bit adjusted
   #Q_chromosomes <- Q_chromosomes_auto
@@ -124,7 +126,7 @@ plot_length <- max_end # make plot_length the max of the longest chr set
 
 pdf(paste0(args$output_prefix, '.pdf'))
 print('[+] Generating plot')
-plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(args$busco_list)*2),((gap+1)*length(args$busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(busco_list)*2),((gap+1)*length(busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
 
 if (nrow(R_chromosomes) <= 6){
   col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
@@ -159,7 +161,7 @@ col_list <- sapply(col_list, t_col, args$alpha)
 main_counter <- 1
 y_offset <- 0
 y_increment <- 17
-for (i in args$busco_list){
+for (i in busco_list){
   # print(i)
   # print(tail(alignments))
   alignments <- processed_Q_list[[main_counter]]
@@ -232,7 +234,7 @@ for (i in args$busco_list){
   y_offset <- y_offset + y_increment
   }
 
-#dev.off()
+dev.off()
 
 main_counter <- 1
 for (i in args$busco_list){
