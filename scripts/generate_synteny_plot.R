@@ -42,7 +42,6 @@ source('scripts/helper_functions.R') # import functions
 gap <- args$gap
 gap=6
 show_outline = TRUE
-chr_offset = 20000000 # TODO make this automatically a prop of chr length
 
 ### read in data ###
 
@@ -52,10 +51,18 @@ chr_offset = 20000000 # TODO make this automatically a prop of chr length
 # alignments <- merge(alignments, algs, by='busco')
 
 R_df <- read_buscos(args$busco1, 'R')
+busco1_df <- R_df
 #Q_df <- read_buscos(args$busco2, 'Q') 
 R_chromosomes <- read.table(args$chrom1, sep = '\t', header = TRUE)
 #Q_chromosomes <- read.table(args$chrom2, sep = '\t', header = TRUE)
 R_chromosomes <- R_chromosomes %>% arrange(order)
+R_filt <- R_df %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+busco1_chr <- R_chromosomes <- R_chromosomes %>% filter(chr %in% R_filt$chrR) 
+
+chr_offset = max(busco1_df$Rend) /2 # make chr offset 50% of the largest chr size in the ref chr set
+# NB: using ref genome as a proxy for chr lengths in other genomes too
+
+
 
 make_alignment_table <- function(R_df, R_chromosomes, Q_df, Q_chromosomes){
   alignments <- merge(Q_df, R_df, by='busco')
@@ -118,21 +125,14 @@ for (i in busco_list){
 }
 
 
-max_end <- max(unlist(max_ends))
-plot_length <- max_end # make plot_length the max of the longest chr set
-
-pdf(paste0(args$output_prefix, '.pdf'))
-print('[+] Generating plot')
-plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(busco_list)*2),((gap+1)*length(busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
-
-if (nrow(R_chromosomes) <= 6){
-  col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7')
+if (nrow(busco1_chr) <= 9){
+  col_list <- c("#ffc759","#FF7B9C", "#607196", "#BABFD1", '#BACDB0', '#C6E2E9', '#F3D8C7', '#47A8BD','#FFAD69')
 } else { 
   col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
                        '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
                        '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
                        '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
-  num_remove <- length(col_list) - nrow(R_chromosomes)
+  num_remove <- length(col_list) - nrow(busco1_chr)
   if (num_remove > 0){
     set.seed(123) # set a random seed for reproducibility
     indices_to_remove <- sample(length(col_list), num_remove) # get random indices of elements to remove
@@ -141,19 +141,43 @@ if (nrow(R_chromosomes) <= 6){
     }
   }
 
-if (nrow(R_chromosomes) > 31){
+if (nrow(busco1_chr) > 31){
 col_list <- c('#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
               '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
               '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
-              '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76','#577590', 
-              '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
+              '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76',
+              '#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
+              '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
+              '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
+              '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76',
+              '#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
+              '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
+              '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
+              '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76',
+              '#577590', '#617A8B', '#6B8086', '#748581', '#7E8A7C', '#889077', '#929572', '#9B9A6D',
               '#A5A068', '#AFA563', '#B9AA5E', '#C2AF59', '#CCB554', '#D6BA4F', '#E0BF4A', '#E9C545', 
               '#F3CA40', '#F1C544', '#EFC148', '#EDBC4C', '#EBB84F', '#E9B353', '#E7AF57', '#E5AA5B',
               '#E3A55F', '#E1A163', '#DF9C67', '#DD986A', '#DB936E', '#D98F72', '#D78A76')
 }
 
+col_list_final <- col_list[1:nrow(busco1_chr)] # subset col_list to number needed based on number of busco1 chr
+busco1_chr$chr_colour <- col_list_final
+busco_2_colour <- busco1_chr[,c(1,4)]
+temp <- busco1_df[,c(1,2)]
+colnames(temp) <- c('busco', 'chr')
+busco_2_colour <- merge(busco_2_colour, temp, by='chr') # assigns a colour to each busco based on which chr its in in busco1
 
-col_list <- sapply(col_list, t_col, args$alpha)
+print(paste('Col list final:', col_list_final))
+print(nrow(busco1_chr))
+max_end <- max(unlist(max_ends))
+plot_length <- max_end # make plot_length the max of the longest chr set
+
+pdf(paste0(args$output_prefix, '.pdf'))
+print('[+] Generating plot')
+plot(0,cex = 0, xlim = c(1, plot_length), ylim = c(((gap+1)*-1*length(busco_list)*2),((gap+1)*length(busco_list)*2)), xlab = "", ylab = "", bty = "n", yaxt="n", xaxt="n")
+
+# I think we don't need this here anymore:
+#col_list <- sapply(col_list, t_col, args$alpha)
 
 main_counter <- 1
 y_offset <- 0
@@ -185,7 +209,8 @@ for (i in busco_list){
   for (i in chr_order_R){
       temp <- alignments[alignments$chrR == i,]
       #plot_one_ref_chr(temp, col_list[[counter]], "red", adjustment_length_R, adjustment_length_Q, y_offset) # use this if want to colour inverted genes in red
-      plot_one_ref_chr(temp, col_list[[counter]], col_list[[counter]], adjustment_length_R, adjustment_length_Q, y_offset)
+      #plot_one_ref_chr(temp, col_list[[counter]], col_list[[counter]], adjustment_length_R, adjustment_length_Q, y_offset)
+      plot_one_ref_chr(temp, adjustment_length_R, adjustment_length_Q, y_offset, busco_2_colour, alpha)
       counter <- counter + 1
   }
   
