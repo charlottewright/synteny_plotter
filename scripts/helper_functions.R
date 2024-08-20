@@ -164,7 +164,7 @@ offset_chr <- function(df, q_or_r, chr_offset, chr_order){
   return(output_list)
 }
 
-plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_length_Q, y_offset){ 
+plot_one_ref_chr <- function(df, adjustment_length_R, adjustment_length_Q, y_offset, busco_2_colour, alpha){ 
   df$Qstart <- df$Qstart + adjustment_length_Q
   df$Qend <- df$Qend + adjustment_length_Q
   df$Rstart <- df$Rstart + adjustment_length_R
@@ -174,10 +174,17 @@ plot_one_ref_chr <- function(df, col1, col2, adjustment_length_R, adjustment_len
   Rstarts <- df$Rstart # was alignments
   Rends <- df$Rend # was alignments
   #cols =  c("blue", "red")
-  cols = c(col1, col2)
-  border = ifelse(sign(Rends - Rstarts) == sign(Qends - Qstarts), cols[1], cols[2]) # if R&Q are same sign, use blue, else use red
-  col = border
+#  cols = c(col1, col2)
+ # border = ifelse(sign(Rends - Rstarts) == sign(Qends - Qstarts), cols[1], cols[2]) # if R&Q are same sign, use blue, else use red
+ # col = border
   for (i in 1:nrow(df)){ # curved lines- sigmoid connector = x1,y1,x2,y2
+    busco <-df$busco[i]
+    col1 <- busco_2_colour$chr_colour[busco_2_colour$busco == busco]
+    #col2 <- t_col(col1, alpha) # this is occasionally erroring - I don't know why?
+    col2 <- col1 # for now lets keep both strands same colour rather than reverse strand being half as transparent (see above line)
+    cols = c(col1, col2)
+    border = ifelse(sign(Rends - Rstarts) == sign(Qends - Qstarts), cols[1], cols[2]) # if R&Q are same sign, use blue, else use red
+    col = border
     lines.to.poly(sigmoid.connector(Qstarts[i], 1-gap-y_offset, Rstarts[i], 0+gap-y_offset, vertical=T),
                   sigmoid.connector(Qends[i], 1-gap-y_offset, Rends[i], 0+gap-y_offset, vertical=T),
                   col = col[i], border=ifelse(show_outline==FALSE, NA, border[i]), lwd=lwd)
