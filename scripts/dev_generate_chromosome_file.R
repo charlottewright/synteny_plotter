@@ -17,6 +17,7 @@ source('scripts/helper_functions.R')
 
 minimum_buscos = args$f
 
+print(paste('Running with a minimum number of markers of:', minimum_buscos))
 # uncomment if running manually
 #args$busco1 <-'test_data/Melitaea_cinxia.tsv'
 #args$busco2 <-'test_data/Vanessa_cardui.tsv'
@@ -37,7 +38,11 @@ R_chromosomes <- R_chromosomes %>% arrange(order)
 alignments <- merge(Q_df, R_df, by='busco')
 # apply any filters
 alignments <- alignments %>% group_by(chrR) %>% filter(n() > minimum_buscos) %>% ungroup()
+alignments <- alignments %>% group_by(chrQ) %>% filter(n() > minimum_buscos) %>% ungroup()
 R_chromosomes <- R_chromosomes %>% filter(chr %in% alignments$chrR) # removing those with no / few BUSCO genes from the reference chr table
+print(head(Q_df))
+Q_df <- Q_df %>% group_by(chrQ) %>% filter(n() > minimum_buscos) %>% ungroup()
+#Q_chromosomes <- Q_chromosomes %>% filter(chr %in% alignments$chrQ) # removing those with no / few BUSCO genes from the query chr table
 
 ######## till here it's what is in the origin thingy
 
